@@ -6,7 +6,7 @@
 int main() {
     std::string message;
 
-    std::cout << "AirLink v0.3.0\n";
+    std::cout << "AirLink v0.4.0\n";
     std::cout << "Enter message: ";
     std::getline(std::cin, message);
 
@@ -48,3 +48,4 @@ int main() {
 
     return 0;
 }
+

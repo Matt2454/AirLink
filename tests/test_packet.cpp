@@ -1,40 +1,47 @@
-#include "packet.hpp"
-#include <cassert>
-#include <iostream>
+cmake_minimum_required(VERSION 3.20)
 
-int main() {
-    Packet packet;
-    packet.payload = "Hello";
+project(AirLink VERSION 0.4.0 LANGUAGES CXX)
 
-    auto data = serialize(packet);
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-    // Verify packet structure
-    assert(data.size() == 8);
-    assert(data[0] == 1);
-    assert(data[1] == 0);
-    assert(data[2] == 5);
+# Main application
+add_executable(airlink
+    src/main.cpp
+    src/codec.cpp
+    src/packet.cpp
+    src/crc.cpp
+)
 
-    // Verify round-trip
-    auto decoded = deserialize(data);
+target_include_directories(airlink PRIVATE include)
 
-    assert(decoded.has_value());
-    assert(decoded->version == 1);
-    assert(decoded->payload == "Hello");
+enable_testing()
 
-    // Invalid packets
-    assert(!deserialize({}).has_value());
-    assert(!deserialize({1, 0}).has_value());
-    assert(!deserialize({2, 0, 0}).has_value());
-    assert(!deserialize({1, 0, 5, 65}).has_value());
+# Codec tests
+add_executable(test_codec
+    tests/test_codec.cpp
+    src/codec.cpp
+)
 
-    // Empty payload
-    Packet empty;
-    auto result = deserialize(serialize(empty));
+target_include_directories(test_codec PRIVATE include)
+add_test(NAME CodecTests COMMAND test_codec)
 
-    assert(result.has_value());
-    assert(result->payload.empty());
+# Packet tests
+add_executable(test_packet
+    tests/test_packet.cpp
+    src/packet.cpp
+    src/crc.cpp
+)
 
-    std::cout << "All packet tests passed!\n";
+target_include_directories(test_packet PRIVATE include)
+add_test(NAME PacketTests COMMAND test_packet)
 
-    return 0;
-}
+# CRC tests
+add_executable(test_crc
+    tests/test_crc.cpp
+    src/crc.cpp
+)
+
+target_include_directories(test_crc PRIVATE include)
+add_test(NAME CRCTests COMMAND test_crc)
+

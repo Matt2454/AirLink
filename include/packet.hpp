@@ -6,7 +6,7 @@
 #include <optional>
 
 struct Packet {
-    uint8_t version = 1;
+    uint8_t version = 2;
     std::string payload;
 };
 

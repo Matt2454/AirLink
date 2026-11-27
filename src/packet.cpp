@@ -1,4 +1,5 @@
 #include "packet.hpp"
+#include "crc.hpp"
 #include <stdexcept>
 
 std::vector<uint8_t> serialize(const Packet& packet) {
@@ -7,15 +8,12 @@ std::vector<uint8_t> serialize(const Packet& packet) {
     }
 
     std::vector<uint8_t> data;
-
     uint16_t length = static_cast<uint16_t>(
         packet.payload.size()
     );
 
     // Header
     data.push_back(packet.version);
-
-    // Payload length (big-endian)
     data.push_back(static_cast<uint8_t>(length >> 8));
     data.push_back(static_cast<uint8_t>(length & 0xFF));
 
@@ -24,17 +22,23 @@ std::vector<uint8_t> serialize(const Packet& packet) {
                 packet.payload.begin(),
                 packet.payload.end());
 
+    // CRC-16
+    uint16_t checksum = crc16(data);
+
+    data.push_back(static_cast<uint8_t>(checksum >> 8));
+    data.push_back(static_cast<uint8_t>(checksum & 0xFF));
+
     return data;
 }
 
 std::optional<Packet> deserialize(
     const std::vector<uint8_t>& data
 ) {
-    if (data.size() < 3) {
+    if (data.size() < 5) {
         return std::nullopt;
     }
 
-    if (data[0] != 1) {
+    if (data[0] != 2) {
         return std::nullopt;
     }
 
@@ -42,13 +46,30 @@ std::optional<Packet> deserialize(
         (static_cast<uint16_t>(data[1]) << 8) |
         data[2];
 
-    if (data.size() != 3u + length) {
+    if (data.size() != 5u + length) {
+        return std::nullopt;
+    }
+
+    // Extract received CRC
+    uint16_t receivedCRC =
+        (static_cast<uint16_t>(data[data.size() - 2]) << 8) |
+        data.back();
+
+    // Calculate expected CRC
+    std::vector<uint8_t> content(
+        data.begin(), data.end() - 2
+    );
+
+    if (crc16(content) != receivedCRC) {
         return std::nullopt;
     }
 
     Packet packet;
     packet.version = data[0];
-    packet.payload.assign(data.begin() + 3, data.end());
+    packet.payload.assign(
+        data.begin() + 3, data.end() - 2
+    );
 
     return packet;
 }
+
